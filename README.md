@@ -1,0 +1,30 @@
+# Rallly
+
+A self-hosted rallly application.
+
+## Installation
+
+### Option 1: Quick Install
+```bash
+curl -q -LSsf "https://raw.githubusercontent.com/composemgr/rallly/main/docker-compose.yaml" | docker compose -f - up -d
+```
+
+### Option 2: Git Clone
+```bash
+git clone "https://github.com/composemgr/rallly" ~/.local/srv/docker/rallly
+cd ~/.local/srv/docker/rallly
+docker compose up -d
+```
+
+### Option 3: Using composemgr
+```bash
+composemgr install rallly
+```
+
+## Configuration
+
+See docker-compose.yaml for environment variables and configuration options.
+
+## Documentation
+
+Check the official project documentation for detailed setup and usage information.
