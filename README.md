@@ -50,9 +50,9 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/rallly` - Data storage
-- `./rootfs/config/rallly` - Data storage
-- `./rootfs/data/db/postgres/rallly` - Data storage
+- `./volumes/data/rallly` - Data storage
+- `./volumes/config/rallly` - Data storage
+- `./volumes/data/db/postgres/rallly` - Data storage
 
 ## 🔐 Security
 
