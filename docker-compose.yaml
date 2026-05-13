@@ -17,6 +17,8 @@ services:
     logging: *default-logging
     networks:
       - rallly
+      - proxy
+      - cloudflare
     ports:
       - "172.17.0.1:3004:3000"
     environment:
@@ -27,10 +29,12 @@ services:
       SUPPORT_EMAIL: ${APP_ADMIN_USER:-admin@example.com}
       SMTP_HOST: ${EMAIL_SERVER_HOST:-localhost}
       SMTP_PORT: ${EMAIL_SERVER_PORT:-587}
-      SMTP_USER: ${EMAIL_SERVER_USER:-""}
-      SMTP_PWD: ${EMAIL_SERVER_PASS:-""}
+      SMTP_USER: ${EMAIL_SERVER_LOGIN_NAME:-""}
+      SMTP_PWD: ${EMAIL_SERVER_LOGIN_PASS:-""}
       NOREPLY_EMAIL: ${EMAIL_SERVER_MAIL_FROM:-noreply@example.com}
       DISABLE_LANDING_PAGE: ${DISABLE_LANDING_PAGE:-true}
+      CONTAINER_NAME: rallly-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
     depends_on:
       rallly-db:
         condition: service_healthy
@@ -39,6 +43,22 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://rallly-app:3000'
+      - 'cloudflare.hostname=rallly.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.rallly-app.entrypoints=http'
+      - 'traefik.http.routers.rallly-app-secure.tls=true'
+      - 'traefik.http.routers.rallly-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.rallly-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.rallly-app.middlewares=rallly-app-https-redirect'
+      - 'traefik.http.routers.rallly-app-secure.entrypoints=https'
+      - 'traefik.http.routers.rallly-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.rallly-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.rallly-app-secure.service=rallly-app'
+      - 'traefik.http.services.rallly-app.loadbalancer.server.port=3000'
 
   rallly-db:
     image: postgres:latest
@@ -53,6 +73,7 @@ services:
       POSTGRES_DB: ${DB_CREATE_DATABASE_NAME:-rallly}
       POSTGRES_USER: ${DB_USER_NAME:-rallly}
       POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      CONTAINER_NAME: rallly-db
     volumes:
       - ./volumes/data/db/postgres/rallly:/var/lib/postgresql/data
     healthcheck:
@@ -65,3 +86,7 @@ networks:
   rallly:
     name: rallly
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
