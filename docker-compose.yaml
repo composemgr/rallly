@@ -1,5 +1,6 @@
 # nginx proxy address - http://172.17.0.1:3004
 
+name: rallly
 x-logging: &default-logging
   driver: json-file
   options:
@@ -8,31 +9,42 @@ x-logging: &default-logging
 
 services:
   rallly:
-    image: rallly/rallly:latest
+    image: lukevella/rallly:latest
+    pull_policy: always
     container_name: rallly-app
-    restart: unless-stopped
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
     logging: *default-logging
     networks:
       - rallly
     ports:
-      - "3004:3004"
+      - "172.17.0.1:3004:3000"
     environment:
       TZ: ${TZ:-America/New_York}
-    volumes:
-      - ./volumes/data/rallly:/data
-      - ./volumes/config/rallly:/config
+      BASE_URL: https://${BASE_HOST_NAME:-localhost}.${BASE_DOMAIN_NAME:-example.com}
+      SECRET_PASSWORD: ${APP_SECRET_KEY:-changeme_secret_key_min_32_chars}
+      DATABASE_URL: postgresql://${DB_USER_NAME:-rallly}:${DB_USER_PASS:-changeme_db_password}@rallly-db:5432/${DB_CREATE_DATABASE_NAME:-rallly}
+      SUPPORT_EMAIL: ${APP_ADMIN_USER:-admin@example.com}
+      SMTP_HOST: ${EMAIL_SERVER_HOST:-localhost}
+      SMTP_PORT: ${EMAIL_SERVER_PORT:-587}
+      SMTP_USER: ${EMAIL_SERVER_USER:-""}
+      SMTP_PWD: ${EMAIL_SERVER_PASS:-""}
+      NOREPLY_EMAIL: ${EMAIL_SERVER_MAIL_FROM:-noreply@example.com}
+      DISABLE_LANDING_PAGE: ${DISABLE_LANDING_PAGE:-true}
     depends_on:
-      - rallly-db
+      rallly-db:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3004"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
 
   rallly-db:
-    image: postgres:16-alpine
+    image: postgres:latest
+    pull_policy: always
     container_name: rallly-db
-    restart: unless-stopped
+    restart: always
     logging: *default-logging
     networks:
       - rallly
@@ -44,11 +56,12 @@ services:
     volumes:
       - ./volumes/data/db/postgres/rallly:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${{POSTGRES_USER}} -d $${{POSTGRES_DB}}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NAME:-rallly} -d ${DB_CREATE_DATABASE_NAME:-rallly}"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 networks:
   rallly:
+    name: rallly
     external: false
